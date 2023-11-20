@@ -67,7 +67,7 @@ def fromClients(entry):
         try:
             # Save the file data received from the client
             with open(filename, 'wb') as file:
-                file.write(file_data.encode('ISO-8859-1'))
+                file.write(file_data.encode('utf-8'))
 
             # Generate a timestamp
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
