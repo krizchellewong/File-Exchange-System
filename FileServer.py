@@ -8,6 +8,7 @@ import socket
 import time
 import json
 import os
+from datetime import datetime
 
 # Message Buffer Size
 BUFFER_SIZE = 1024
@@ -59,6 +60,23 @@ def fromClients(entry):
     elif command == "store":
         # TODO: Add file to a list for the server to keep track of
         # Error Validation comes in the form of same filename and type, either ask user to overwrite, or rename file
+        filename = message.get('filename')
+        file_data = message.get('data')
+        user = clients.get(address)  # Assuming `clients` is a dict mapping addresses to usernames
+
+        try:
+            # Save the file data received from the client
+            with open(filename, 'wb') as file:
+                file.write(file_data.encode('ISO-8859-1'))
+
+            # Generate a timestamp
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            response_message = f"{user}<{timestamp}>: Uploaded {filename}"
+            response = json.dumps({'command': 'success', 'message': response_message})
+        except Exception as e:
+            # Handle exceptions during file write
+            response = json.dumps({'command': 'error', 'message': str(e)})
+        server_socket.sendto(response.encode(), address)
         
         pass
     # Request File List from Server

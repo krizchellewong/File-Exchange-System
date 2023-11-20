@@ -85,7 +85,23 @@ def toServer(entry):
             print("Error: Please connect to the server first.")
     # Store Command
     elif command == "/store":
-        # TODO: Add file to a list for the server 
+        if len(params) < 1:
+            print("Usage: /store <filename>")
+        else:
+            filename = params[0]
+            try:
+                # Open the specified file in binary mode for reading
+                with open(filename, 'rb') as file:
+                    file_data = file.read()
+                    # Send file data to the server with the command and filename
+                    client_socket.sendto(json.dumps({"command": "store", "filename": filename, "data": file_data.decode('ISO-8859-1')}).encode(), server_address)
+                    print(f"File {filename} sent to server.")
+            except FileNotFoundError:
+                # Handle the case where the file does not exist
+                print(f"Error: File not found.")
+            except Exception as e:
+                # General exception handling
+                print(f"Error: {str(e)}")
         pass
     # DIR Command
     elif command == "/dir":
