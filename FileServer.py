@@ -71,6 +71,7 @@ def fromClients(entry):
 
             # Generate a timestamp
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            file_list.append((filename, timestamp, user))
             response_message = f"{user}<{timestamp}>: Uploaded {filename}"
             response = json.dumps({'command': 'success', 'message': response_message})
         except Exception as e:
@@ -78,11 +79,22 @@ def fromClients(entry):
             response = json.dumps({'command': 'error', 'message': str(e)})
         server_socket.sendto(response.encode(), address)
         
-        pass
     # Request File List from Server
     elif command == "dir":
-        # TODO: Send file list to client
-        pass
+        # If Server does not contain any files
+        print("Command DIR")
+        if len(file_list) == 0:
+            print("Error: No files in server.")
+            jsonData = {'command': 'error', 'message': "Error: No files in server."}
+        # Server has files
+        else:
+            print("server has files")
+            jsonData = {'command': 'dir', 'file_list': file_list}
+        # Response to Client
+        print("sending response")
+        server_socket.sendto(json.dumps(jsonData).encode(), address)
+        print("sent successfully")
+        
     # Retrieve File from Server
     elif command == "get":
         # TODO: send file requested to client
@@ -112,6 +124,8 @@ def ping():
 clients = {}
 # List of Disconnected Clients
 disconnected = []
+# Server File Directory List
+file_list = []
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)           
        

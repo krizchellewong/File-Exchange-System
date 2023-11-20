@@ -31,9 +31,14 @@ def toServer(entry):
     
     # Join Command
     if command == "/join":
+        # Invalid Syntax/Parameters
         if len(params) != 2:
             print("Invalid command syntax!!")
             print("Usage: /join <server_ip_add> <port>")
+        # User is already connected to the server
+        elif isConnected:
+            print("Error: User is already connected to the server.")
+        # No Errors
         else:
             try:
                 server_address = (params[0], int(params[1]))
@@ -85,28 +90,36 @@ def toServer(entry):
             print("Error: Please connect to the server first.")
     # Store Command
     elif command == "/store":
-        if len(params) < 1:
-            print("Usage: /store <filename>")
+        if isConnected:
+            if len(params) < 1:
+                print("Usage: /store <filename>")
+            else:
+                filename = params[0]
+                try:
+                    # Open the specified file in binary mode for reading
+                    with open(filename, 'rb') as file:
+                        file_data = file.read()
+                        # Send file data to the server with the command and filename
+                        client_socket.sendto(json.dumps({"command": "store", "filename": filename, "data": file_data.decode('ISO-8859-1')}).encode(), server_address)
+                        print(f"File {filename} sent to server.")
+                except FileNotFoundError:
+                    # Handle the case where the file does not exist
+                    print(f"Error: File not found.")
+                except Exception as e:
+                    # General exception handling
+                    print(f"Error: {str(e)}")
+                    print("> ", end = "")
         else:
-            filename = params[0]
-            try:
-                # Open the specified file in binary mode for reading
-                with open(filename, 'rb') as file:
-                    file_data = file.read()
-                    # Send file data to the server with the command and filename
-                    client_socket.sendto(json.dumps({"command": "store", "filename": filename, "data": file_data.decode('ISO-8859-1')}).encode(), server_address)
-                    print(f"File {filename} sent to server.")
-            except FileNotFoundError:
-                # Handle the case where the file does not exist
-                print(f"Error: File not found.")
-            except Exception as e:
-                # General exception handling
-                print(f"Error: {str(e)}")
-        pass
+            print("Error: Please connect to the server first.")
+        
     # DIR Command
     elif command == "/dir":
         # TODO: Request File List from server
-        pass
+        # Request File List from Server
+        if isConnected:
+            client_socket.sendto(json.dumps({"command": "dir"}).encode(), server_address)
+        else:
+            print("Error: Please connect to the server first.")
     # Get Command
     elif command == "/get":
         # TODO: Retrieve File from server
@@ -133,9 +146,21 @@ def fromServer(data):
         ping_ack = {'command': 'ping'}
         client_socket.sendto(json.dumps(ping_ack).encode(), server_address)
         return
+    
+    elif command == "dir":
+        # Receive Response from Server
+        print("response received")
+        print("preparing to print")
+        if data['command'] == 'dir':
+            print("File Server Directory:")
+            for file in data['file_list']:
+                filename = file[0]
+                timestamp = file[1]
+                user = file[2]
+                print(f"{filename} <{timestamp}> : {user}")
 
     # Print Response command from Server
-    print(f"> {command}") # FOR DEBUGGING, REMOVE LATER
+    print(f"> {command}!") # FOR DEBUGGING, REMOVE LATER
     # Print Response message from Server
     print(f"> {message}\n> ", end = "")
 
@@ -146,14 +171,15 @@ def receive():
     while True:
         if isConnected:
             try:
-                message = client_socket.recvfrom(BUFFER_SIZE)
-                data = json.loads(message[0].decode())
+                response = client_socket.recvfrom(BUFFER_SIZE)
+                data = json.loads(response[0].decode())
                 fromServer(data)
             except ConnectionResetError:
                 print("Error: Connection to the Server has been lost!")
                 isConnected = False
             except Exception as e:
                 print(f"Error: {str(e)}")
+                print("> ", end = "")
                 
    
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
