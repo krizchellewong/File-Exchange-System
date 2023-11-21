@@ -116,14 +116,34 @@ def toServer(entry):
     elif command == "/dir":
         # TODO: Request File List from server
         # Request File List from Server
+        print("Requested")
         if isConnected:
-            client_socket.sendto(json.dumps({"command": "dir"}).encode(), server_address)
+            print("Sending request")
+            try:
+                client_socket.sendto(json.dumps({"command": "dir"}).encode(), server_address)
+            except Exception as e:
+                print("Error sending data:", e)            
         else:
             print("Error: Please connect to the server first.")
+
     # Get Command
     elif command == "/get":
-        # TODO: Retrieve File from server
-        pass
+        if isConnected:
+            print("Connected")
+            if len(params) < 1:
+                print("Error: File not found in the server")
+            else:
+                print("File is here")
+                filename = params[0]
+                try:
+                    
+                    client_socket.sendto(json.dumps({"command": "get", "filename": filename}).encode(), server_address)
+                except Exception as e:
+                    print("Error sending data:", e)
+        else:
+            print("Error: Please connect to the server first.")
+
+
     # Help Command
     elif command == "/?":
         print("Connect to the server application:               /join <server_ip_add> <port>")
@@ -140,7 +160,9 @@ def toServer(entry):
 # Server Message Response
 def fromServer(data):
     command = data['command']
-    message = data['message']
+
+    if 'message' in data:
+        message = data['message']
     
     if command == "ping":
         ping_ack = {'command': 'ping'}
@@ -158,11 +180,21 @@ def fromServer(data):
                 timestamp = file[1]
                 user = file[2]
                 print(f"{filename} <{timestamp}> : {user}")
+        return
+
+    elif command == "get":
+        filename = data['filename']
+        file_data = data['data'].encode('ISO-8859-1')
+        print("Get client")
+        try:
+            with open(filename, 'wb') as file:
+                file.write(file_data)
+            print(f"File received from server:  {filename}")
+        except Exception as e:
+            print(f"Error: {str(e)}")
 
     # Print Response command from Server
     print(f"> {command}!") # FOR DEBUGGING, REMOVE LATER
-    # Print Response message from Server
-    print(f"> {message}\n> ", end = "")
 
 # Receive Response from Server  
 def receive():

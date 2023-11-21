@@ -81,25 +81,40 @@ def fromClients(entry):
         
     # Request File List from Server
     elif command == "dir":
-        # If Server does not contain any files
-        print("Command DIR")
-        if len(file_list) == 0:
-            print("Error: No files in server.")
-            jsonData = {'command': 'error', 'message': "Error: No files in server."}
-        # Server has files
-        else:
-            print("server has files")
-            jsonData = {'command': 'dir', 'file_list': file_list}
-        # Response to Client
-        print("sending response")
-        server_socket.sendto(json.dumps(jsonData).encode(), address)
-        print("sent successfully")
+        try:
+            # If Server does not contain any files
+            print("Command DIR")
+            if len(file_list) == 0:
+                print("Error: No files in server.")
+                jsonData = {'command': 'error', 'message': "Error: No files in server."}
+            # Server has files
+            else:
+                print("Server has files")
+                jsonData = {'command': 'dir', 'file_list': file_list}
+            # Response to Client
+            print("Sending response")
+            print("Data being sent:", jsonData)
+            server_socket.sendto(json.dumps(jsonData).encode(), address)
+            print("Sent successfully")
+        except Exception as e:
+            print("Error sending response to client:", e)
         
     # Retrieve File from Server
     elif command == "get":
-        # TODO: send file requested to client
-        # Error Validation comes in the form of if filename and type does not exist, return error message to client
-        pass
+        data, client_address = server_socket.recvfrom(4096)
+        data = json.loads(data.decode())
+        filename = data['filename']
+        print("Get")
+        try:
+            with open(filename, 'rb') as file:
+                file_data = file.read()
+                response = {"command": "get", "filename": filename, "data": file_data.decode('ISO-8859-1')}
+                print("Response found")
+        except FileNotFoundError:
+            response = {"command": "error", "message": f"File {filename} not found."}
+        except Exception as e:
+            response = {"command": "error", "message": str(e)}
+        client_socket.sendto(json.dumps(response).encode(), client_address)
 
 # BONUS 1 - Broadcast to All Clients - Ping
 def ping():
