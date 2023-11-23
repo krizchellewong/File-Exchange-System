@@ -20,10 +20,23 @@ def fromClients(entry):
     
     # Join Server
     if command == "join":
-        clients.update({address : None})
-        print(f"Client {address} has connected")
-        jsonData = {'command': 'success', 'message': "New user connected"}
-        server_socket.sendto(json.dumps(jsonData).encode(), address)
+        if address in clients:
+            print(f"Client {address} has reconnected")
+            jsonData = {'command': 'success', 'message': f"User {address} reconnected"}
+            server_socket.sendto(json.dumps(jsonData).encode(), address)
+        else:
+            clients.update({address : None})
+            print(f"Client {address} has connected")
+            jsonData = {'command': 'success', 'message': "New user connected"}
+            server_socket.sendto(json.dumps(jsonData).encode(), address)
+        
+        # Bonus 1 - Broadcast to All Clients that a User has Newly Connected/Reconnected
+        for client_address in clients:
+            # Send to all except the sender
+            if client_address != address:
+                jsonData = {'command': 'success', 'message': f"User {address} has connected"}
+                server_socket.sendto(json.dumps(jsonData).encode(), client_address)
+                
            
     # Leave Server     
     elif command == "leave":
@@ -33,11 +46,14 @@ def fromClients(entry):
         else:
             message = f"User {clients[address]} disconnected"
         jsonData = {'command': 'success', 'message': message}
-        # Send to all Clients
+        
+        # Bonus 2 - Broadcast to All Clients that a User has Disconnected
         for client_address in clients:
             # Send to all except the sender
             if client_address != address:
                 server_socket.sendto(json.dumps(jsonData).encode(), client_address)
+            else:
+                server_socket.sendto(json.dumps(jsonData).encode(), address)
     # Register Handle
     elif command == "register":
         handle = message['handle']
@@ -55,7 +71,14 @@ def fromClients(entry):
             print(f"Username {handle} registered by {address}")
             jsonData = {'command': 'success', 'given' : 'register' , 'message': f"Welcome {handle}!"}
             # send back to client
-            server_socket.sendto(json.dumps(jsonData).encode(), address)
+        
+        # Bonus 3 - Broadcast to All Clients that a User has Registered a Handle    
+        for client_address in clients:
+            # Send to all except the sender
+            if client_address != address:
+                server_socket.sendto(json.dumps(jsonData).encode(), client_address)
+            else:
+                server_socket.sendto(json.dumps(jsonData).encode(), address)
     # Store File in Server        
     elif command == "store":
         # TODO: Add file to a list for the server to keep track of
@@ -77,46 +100,56 @@ def fromClients(entry):
         except Exception as e:
             # Handle exceptions during file write
             response = json.dumps({'command': 'error', 'message': str(e)})
-        server_socket.sendto(response.encode(), address)
+        
+        # Bonus 4 - Broadcast to All Clients that a User has Stored a File 
+        for client_address in clients:
+            # Send to all except the sender
+            if client_address != address:
+                server_socket.sendto(json.dumps(jsonData).encode(), client_address)
+            else:
+                server_socket.sendto(json.dumps(jsonData).encode(), address)
         
     # Request File List from Server
     elif command == "dir":
         try:
             # If Server does not contain any files
-            print("Command DIR")
+            # print("Command DIR")
             if len(file_list) == 0:
                 print("Error: No files in server.")
                 jsonData = {'command': 'error', 'message': "Error: No files in server."}
             # Server has files
             else:
-                print("Server has files")
+                # print("Server has files")
                 jsonData = {'command': 'dir', 'file_list': file_list}
             # Response to Client
-            print("Sending response")
-            print("Data being sent:", jsonData)
+            # print("Sending response")
+            # print("Data being sent:", jsonData)
             server_socket.sendto(json.dumps(jsonData).encode(), address)
-            print("Sent successfully")
+            # print("Sent successfully")
         except Exception as e:
             print("Error sending response to client:", e)
         
     # Retrieve File from Server
     elif command == "get":
-        data, client_address = server_socket.recvfrom(4096)
+        data, client_address = server_socket.recvfrom(BUFFER_SIZE)
         data = json.loads(data.decode())
         filename = data['filename']
-        print("Get")
+        # print("Get")
         try:
             with open(filename, 'rb') as file:
                 file_data = file.read()
-                response = {"command": "get", "filename": filename, "data": file_data.decode('ISO-8859-1')}
-                print("Response found")
+                response = {"command": "get", "filename": filename, "data": file_data.decode('ISO-8859-1'), "message": "File sent successfully."}
+                # print("Response found")
+            print("File sent to client successfully.")
         except FileNotFoundError:
             response = {"command": "error", "message": f"File {filename} not found."}
+            print("File Not Found.")
         except Exception as e:
             response = {"command": "error", "message": str(e)}
-        client_socket.sendto(json.dumps(response).encode(), client_address)
+            print(f"Error: {str(e)}")
+        server_socket.sendto(json.dumps(response).encode(), client_address)
 
-# BONUS 1 - Broadcast to All Clients - Ping
+# BONUS 6 - Broadcast to All Clients - Ping
 def ping():
     # Checks All Users in Clients
     for user in clients:
