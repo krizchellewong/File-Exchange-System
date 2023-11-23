@@ -148,8 +148,60 @@ def fromClients(entry):
             response = {"command": "error", "message": str(e)}
             print(f"Error: {str(e)}")
         server_socket.sendto(json.dumps(response).encode(), client_address)
+        
+    # BONUS 1 - Send Message to All Registered Handles
+    elif command == "all":
+        # If Sender has no Handle
+        if clients[address] == None:
+            print(f"Client {address} Attempted to /all without username")
+            jsonData = {'command': 'error', 'message': "Error: You must register a handle first."}
+            server_socket.sendto(json.dumps(jsonData).encode(), address)
+            return
+        # Default
+        message = f"{clients[address]} : {message['message']}"
+        print(f"{address} > {message}")
+        message_jsonData = {'command': 'all', 'message': message}
+        # Send Message to all Registered Handles
+        for client_address, client_handle in clients.items():
+            if client_handle != None:
+                server_socket.sendto(json.dumps(message_jsonData).encode(), client_address)
+       
+    # BONUS 2 - Send Message to Specific Handle         
+    elif command == "dm":
+        handle = message['handle']
+        message = message['message']
+        sender = clients[address]
+        
+        # If Sender has no Handle
+        if sender == None:
+            print(f"Client {address} Attempted to /dm without username")
+            jsonData = {'command': 'error', 'message': "Error: You must register a handle first."}
+            server_socket.sendto(json.dumps(jsonData).encode(), address)
+            return
+        # If Sender send msg to Self
+        elif sender == handle:
+            print(f"Client {address} Attempted to /dm self")
+            jsonData = {'command': 'error', 'message': "Error: You cannot DM yourself."}
+            server_socket.sendto(json.dumps(jsonData).encode(), address)
+            return
+        
+        for client_address, client_handle in clients.items():
+            if client_handle == handle:
+                message_jsonData = {'command': 'dm', 'handle' : sender, 'message': message}
+                try:
+                    server_socket.sendto(json.dumps(message_jsonData).encode(), client_address)
+                    print(f"Message from {address} to {client_address}")
+                    message = f"[To {handle} from {sender}] : {message}"
+                    jsonData = {'command': 'success', 'given' : 'dm', 'message': message}
+                except:
+                    jsonData = {'command': 'error', 'message': "Error: Handle/alias does not exist."}
+                
+                server_socket.sendto(json.dumps(jsonData).encode(), address)
+                return
+            print(f"Direct Message by {address} to {handle} failed")
+            jsonData = {'command': 'error', 'message': "Error: Handle/alias does not exist."}
+            server_socket.sendto(json.dumps(jsonData).encode(), address)
 
-# BONUS 6 - Broadcast to All Clients - Ping
 def ping():
     # Checks All Users in Clients
     for user in clients:

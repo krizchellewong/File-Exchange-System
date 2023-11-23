@@ -146,6 +146,31 @@ def toServer(entry):
                     print("Error sending data:", e)
         else:
             print("Error: Please connect to the server first.")
+            
+    # Message All Command
+    elif command == "/all":
+        if isConnected:
+            if len(params) == 0:
+                print("Error: Command parameters do not match or is not allowed.")
+                print("Usage: /all <message>")
+            else:
+                message = ' '.join(params)
+                client_socket.sendto(json.dumps({"command" : "all", "message" : message}).encode(), server_address)
+        else:
+            print('Error. Please connect to the server first.')
+    
+    # Direct Message Command
+    elif command == "/dm":
+        if isConnected:
+            if len(params) < 2:
+                print("Error: Command parameters do not match or is not allowed.")
+                print("Usage: /msg <handle> <message>")
+            else:
+                handle = params[0]
+                message = ' '.join(params[1:])
+                client_socket.sendto(json.dumps({"command" : "msg", "handle" : handle, "message" : message}).encode(), server_address)
+        else:
+            print('Error. Please connect to the server first.')
 
 
     # Help Command
@@ -156,6 +181,8 @@ def toServer(entry):
         print("Send file to server:                             /store <filename>")
         print("Request directory file list from server:         /dir")
         print("Fetch a file from a server:                      /get <filename>")
+        print("Send a message to all registered Handles:        /all <message>")
+        print("Send a direct message to one Handle:             /dm <handle> <message>")
         print("Request command help:                            /?")
     # Invalid Command (starts with / but not a command)
     else:
@@ -172,6 +199,7 @@ def fromServer(data):
         ping_ack = {'command': 'ping'}
         client_socket.sendto(json.dumps(ping_ack).encode(), server_address)
         return
+    
     
     elif command == "dir":
         # Receive Response from Server
@@ -197,11 +225,21 @@ def fromServer(data):
             print(f"File received from server:  {filename}")
         except Exception as e:
             print(f"Error: {str(e)}")
+            
+    # Receive Global Message
+    elif command == "all":
+        handle = data['handle']
+        message = f"[From {handle} to all]: {message}"
+    
+    elif command == "dm":
+        handle = data['handle']
+        message = f"[From {handle} to you]: {message}"
 
     # Print Response command from Server
-    print(f"> {command}!") # FOR DEBUGGING, REMOVE LATER
-    if 'message' in data:
-        print(f"Server Message: {message}")
+    else:
+        print(f"> {command}!") # FOR DEBUGGING, REMOVE LATER
+        if 'message' in data:
+            print(f"Server Message: {message}")
 
 # Receive Response from Server  
 def receive():
