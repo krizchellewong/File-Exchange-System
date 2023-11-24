@@ -105,9 +105,9 @@ def fromClients(entry):
         for client_address in clients:
             # Send to all except the sender
             if client_address != address:
-                server_socket.sendto(json.dumps(jsonData).encode(), client_address)
+                server_socket.sendto(json.dumps(response).encode(), client_address)
             else:
-                server_socket.sendto(json.dumps(jsonData).encode(), address)
+                server_socket.sendto(json.dumps(response).encode(), address)
         
     # Request File List from Server
     elif command == "dir":
@@ -160,7 +160,7 @@ def fromClients(entry):
         # Default
         message = f"{clients[address]} : {message['message']}"
         print(f"{address} > {message}")
-        message_jsonData = {'command': 'all', 'message': message}
+        message_jsonData = {'command': 'all', 'sender' : f'{clients[address]}', 'message': message}
         # Send Message to all Registered Handles
         for client_address, client_handle in clients.items():
             if client_handle != None:
@@ -187,15 +187,24 @@ def fromClients(entry):
         
         for client_address, client_handle in clients.items():
             if client_handle == handle:
-                message_jsonData = {'command': 'dm', 'handle' : sender, 'message': message}
+                # contain message from sender
+                message_jsonData = {'command': 'dm', 'sender' : sender, 'message': message}
+                print("sent to receiver")
                 try:
+                    print("sending receipt")
+                    # send message to receiver
                     server_socket.sendto(json.dumps(message_jsonData).encode(), client_address)
                     print(f"Message from {address} to {client_address}")
+                    
+                    # notify sender of message receipt
                     message = f"[To {handle} from {sender}] : {message}"
                     jsonData = {'command': 'success', 'given' : 'dm', 'message': message}
+                    print("receipt sent")
                 except:
+                    # invalid receiver
                     jsonData = {'command': 'error', 'message': "Error: Handle/alias does not exist."}
                 
+                # send response to sender
                 server_socket.sendto(json.dumps(jsonData).encode(), address)
                 return
             print(f"Direct Message by {address} to {handle} failed")

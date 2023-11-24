@@ -7,6 +7,7 @@ import socket
 import threading
 import json
 import time
+import os
 
 # Message Buffer Size
 BUFFER_SIZE = 1024
@@ -46,7 +47,7 @@ def toServer(entry):
                 # Send "Join" Command to Server
                 client_socket.sendto(json.dumps({"command": "join"}).encode(), server_address)
                 print("Connection to the Server is successful!")
-                time.sleep(0.1)
+                # time.sleep(0.1)
                 client_socket.settimeout(3)
                 client_socket.settimeout(None)
                 isConnected = True
@@ -171,6 +172,15 @@ def toServer(entry):
                 client_socket.sendto(json.dumps({"command" : "msg", "handle" : handle, "message" : message}).encode(), server_address)
         else:
             print('Error. Please connect to the server first.')
+            
+    elif command == "/cls":
+        os.system('cls')
+        
+    # Command 1 Function
+    elif command == 'command1':
+        pass
+    elif command == 'command2':
+        pass
 
 
     # Help Command
@@ -184,6 +194,7 @@ def toServer(entry):
         print("Send a message to all registered Handles:        /all <message>")
         print("Send a direct message to one Handle:             /dm <handle> <message>")
         print("Request command help:                            /?")
+        print("Clear Screen:                                    /cls")
     # Invalid Command (starts with / but not a command)
     else:
         print("Command not found. Type /? for help.")
@@ -228,12 +239,14 @@ def fromServer(data):
             
     # Receive Global Message
     elif command == "all":
-        handle = data['handle']
-        message = f"[From {handle} to all]: {message}"
+        sender = data['sender']
+        message = f"[From {sender} to all]: {message}"
+        print(f"{message}")
     
     elif command == "dm":
         handle = data['handle']
         message = f"[From {handle} to you]: {message}"
+        print(f"{message}")
 
     # Print Response command from Server
     else:
