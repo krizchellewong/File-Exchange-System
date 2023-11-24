@@ -128,12 +128,10 @@ def fromClients(entry):
             # print("Sent successfully")
         except Exception as e:
             print("Error sending response to client:", e)
-        
+    
     # Retrieve File from Server
     elif command == "get":
-        data, client_address = server_socket.recvfrom(BUFFER_SIZE)
-        data = json.loads(data.decode())
-        filename = data['filename']
+        filename = message['filename']
         # print("Get")
         try:
             with open(filename, 'rb') as file:
@@ -147,7 +145,7 @@ def fromClients(entry):
         except Exception as e:
             response = {"command": "error", "message": str(e)}
             print(f"Error: {str(e)}")
-        server_socket.sendto(json.dumps(response).encode(), client_address)
+        server_socket.sendto(json.dumps(response).encode(), address)
         
     # BONUS 1 - Send Message to All Registered Handles
     elif command == "all":

@@ -9,6 +9,8 @@ Steps for Launching:
 3. Open another instance of command prompt for file client.
 4. Run client by entering "py FileClient.py"
 
+Note: if 'py' command does not work, try using 'python' instead
+
 Steps for setting up server:
 1. In the command prompt, user will be asked for the IP Address and Port Number that the server will utilize.
 2. Any IP Address and Port Number may be usable, but for demo and testing, we will stick to 127.0.0.1 and 12345 for the IP and Port, respectively.
