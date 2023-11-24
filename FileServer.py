@@ -29,13 +29,6 @@ def fromClients(entry):
             print(f"Client {address} has connected")
             jsonData = {'command': 'success', 'message': "New user connected"}
             server_socket.sendto(json.dumps(jsonData).encode(), address)
-        
-        # Bonus 1 - Broadcast to All Clients that a User has Newly Connected/Reconnected
-        for client_address in clients:
-            # Send to all except the sender
-            if client_address != address:
-                jsonData = {'command': 'success', 'message': f"User {address} has connected"}
-                server_socket.sendto(json.dumps(jsonData).encode(), client_address)
                 
            
     # Leave Server     
@@ -45,15 +38,15 @@ def fromClients(entry):
             message = "Unregistered user disconnected"
         else:
             message = f"User {clients[address]} disconnected"
-        jsonData = {'command': 'success', 'message': message}
+        jsonData = {'command': 'server', 'message': message}
         
         # Bonus 2 - Broadcast to All Clients that a User has Disconnected
         for client_address in clients:
             # Send to all except the sender
             if client_address != address:
                 server_socket.sendto(json.dumps(jsonData).encode(), client_address)
-            else:
-                server_socket.sendto(json.dumps(jsonData).encode(), address)
+
+        # clients.pop(address)
     # Register Handle
     elif command == "register":
         handle = message['handle']
@@ -69,7 +62,7 @@ def fromClients(entry):
         else:
             clients[address] = handle
             print(f"Username {handle} registered by {address}")
-            jsonData = {'command': 'success', 'given' : 'register' , 'message': f"Welcome {handle}!"}
+            jsonData = {'command': 'server', 'given' : 'register' , 'message': f"Welcome {handle}!"}
             # send back to client
         
         # Bonus 3 - Broadcast to All Clients that a User has Registered a Handle    
@@ -77,8 +70,6 @@ def fromClients(entry):
             # Send to all except the sender
             if client_address != address:
                 server_socket.sendto(json.dumps(jsonData).encode(), client_address)
-            else:
-                server_socket.sendto(json.dumps(jsonData).encode(), address)
     # Store File in Server        
     elif command == "store":
         # TODO: Add file to a list for the server to keep track of
@@ -96,7 +87,7 @@ def fromClients(entry):
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             file_list.append((filename, timestamp, user))
             response_message = f"{user}<{timestamp}>: Uploaded {filename}"
-            response = json.dumps({'command': 'success', 'message': response_message})
+            response = json.dumps({'command': 'server', 'message': response_message})
         except Exception as e:
             # Handle exceptions during file write
             response = json.dumps({'command': 'error', 'message': str(e)})
@@ -106,8 +97,6 @@ def fromClients(entry):
             # Send to all except the sender
             if client_address != address:
                 server_socket.sendto(json.dumps(response).encode(), client_address)
-            else:
-                server_socket.sendto(json.dumps(response).encode(), address)
         
     # Request File List from Server
     elif command == "dir":
@@ -156,7 +145,7 @@ def fromClients(entry):
             server_socket.sendto(json.dumps(jsonData).encode(), address)
             return
         # Default
-        message = f"{clients[address]} : {message['message']}"
+        message = f"{message['message']}"
         print(f"{address} > {message}")
         message_jsonData = {'command': 'all', 'sender' : f'{clients[address]}', 'message': message}
         # Send Message to all Registered Handles
@@ -169,6 +158,8 @@ def fromClients(entry):
         handle = message['handle']
         message = message['message']
         sender = clients[address]
+        
+        print(f"{sender} to {handle} : {message}")
         
         # If Sender has no Handle
         if sender == None:
@@ -187,17 +178,17 @@ def fromClients(entry):
             if client_handle == handle:
                 # contain message from sender
                 message_jsonData = {'command': 'dm', 'sender' : sender, 'message': message}
-                print("sent to receiver")
+                # print("sent to receiver")
                 try:
-                    print("sending receipt")
+                    # print("sending receipt")
                     # send message to receiver
                     server_socket.sendto(json.dumps(message_jsonData).encode(), client_address)
-                    print(f"Message from {address} to {client_address}")
+                    print(f"Direct Message Sent from {sender} to {handle}")
                     
                     # notify sender of message receipt
-                    message = f"[To {handle} from {sender}] : {message}"
-                    jsonData = {'command': 'success', 'given' : 'dm', 'message': message}
-                    print("receipt sent")
+                    receipt = f"{message}"
+                    jsonData = {'command': 'receipt', 'given' : 'dm', 'handle' : handle, 'message': receipt}
+                    print(f"Receipt sent back to {sender}")
                 except:
                     # invalid receiver
                     jsonData = {'command': 'error', 'message': "Error: Handle/alias does not exist."}
@@ -205,9 +196,6 @@ def fromClients(entry):
                 # send response to sender
                 server_socket.sendto(json.dumps(jsonData).encode(), address)
                 return
-            print(f"Direct Message by {address} to {handle} failed")
-            jsonData = {'command': 'error', 'message': "Error: Handle/alias does not exist."}
-            server_socket.sendto(json.dumps(jsonData).encode(), address)
 
 def ping():
     # Checks All Users in Clients
