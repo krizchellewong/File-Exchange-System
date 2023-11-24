@@ -47,7 +47,7 @@ def toServer(entry):
                 # Send "Join" Command to Server
                 client_socket.sendto(json.dumps({"command": "join"}).encode(), server_address)
                 print("Connection to the Server is successful!")
-                # time.sleep(0.1)
+                time.sleep(0.1)
                 client_socket.settimeout(3)
                 client_socket.settimeout(None)
                 isConnected = True
@@ -69,6 +69,7 @@ def toServer(entry):
             else:
                 client_socket.sendto(json.dumps({"command": "leave"}).encode(), server_address)
                 print("Connection closed. Thank you!")
+                time.sleep(0.1)
                 isConnected = False
                 server_address = None
         # No Connection Established yet
@@ -85,6 +86,7 @@ def toServer(entry):
             # Send "Register" Command to Server
             else:
                 client_socket.sendto(json.dumps({"command": "register", "handle": params[0]}).encode(), server_address)
+                print(f"Handle Registration Successful! Your Handle is now {params[0]}.")
                 time.sleep(0.1)
         # No Connection Established yet
         else:
@@ -103,15 +105,14 @@ def toServer(entry):
                         file_data = file.read()
                         # Send file data to the server with the command and filename
                         client_socket.sendto(json.dumps({"command": "store", "filename": filename, "data": file_data.decode('ISO-8859-1')}).encode(), server_address)
-                        time.sleep(0.1)
                         print(f"File {filename} sent to server.")
+                        time.sleep(0.1)
                 except FileNotFoundError:
                     # Handle the case where the file does not exist
-                    print(f"Error: File not found.")
+                    print(f"Error: File not found.\n> ", end = "")
                 except Exception as e:
                     # General exception handling
-                    print(f"Error: {str(e)}")
-                    print("> ", end = "")
+                    print(f"Error: {str(e)}\n> ", end = "")
         else:
             print("Error: Please connect to the server first.")
         
@@ -165,22 +166,17 @@ def toServer(entry):
         if isConnected:
             if len(params) < 2:
                 print("Error: Command parameters do not match or is not allowed.")
-                print("Usage: /msg <handle> <message>")
+                print("Usage: /dm <handle> <message>")
             else:
                 handle = params[0]
                 message = ' '.join(params[1:])
-                client_socket.sendto(json.dumps({"command" : "msg", "handle" : handle, "message" : message}).encode(), server_address)
+                # print(f"Sending message to {handle}: {message}")
+                client_socket.sendto(json.dumps({"command" : "dm", "handle" : handle, "message" : message}).encode(), server_address)
         else:
             print('Error. Please connect to the server first.')
             
     elif command == "/cls":
         os.system('cls')
-        
-    # Command 1 Function
-    elif command == 'command1':
-        pass
-    elif command == 'command2':
-        pass
 
 
     # Help Command
@@ -241,18 +237,26 @@ def fromServer(data):
     elif command == "all":
         sender = data['sender']
         message = f"[From {sender} to all]: {message}"
-        print(f"{message}")
+        print(f"{message}\n> ", end = "")
     
+    # Receive Message from Sender
     elif command == "dm":
+        sender = data['sender']
+        message = f"[From {sender} to you]: {message}"
+        print(f"{message}\n> ", end = "")
+        
+    # Receive Message Receipt
+    elif command == 'receipt':
         handle = data['handle']
-        message = f"[From {handle} to you]: {message}"
-        print(f"{message}")
+        message = f"[From you to {handle}]: {message}"
+        print("> ", end = "")
 
     # Print Response command from Server
-    else:
-        print(f"> {command}!") # FOR DEBUGGING, REMOVE LATER
+    elif command == 'server' or command == 'error':
+        # print(f"> {command}!") # FOR DEBUGGING, REMOVE LATER
         if 'message' in data:
             print(f"Server Message: {message}")
+            # print("> ", end = "")
 
 # Receive Response from Server  
 def receive():
