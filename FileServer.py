@@ -35,9 +35,9 @@ def fromClients(entry):
     elif command == "leave":
         print(f"Client {clients[address]}:{address} disconnected")
         if clients[address] == None:
-            message = "Unregistered user disconnected"
+            message = "Unregistered user disconnected\n> "
         else:
-            message = f"User {clients[address]} disconnected"
+            message = f"User {clients[address]} disconnected\n> "
         jsonData = {'command': 'server', 'message': message}
         
         # Bonus 2 - Broadcast to All Clients that a User has Disconnected
@@ -53,16 +53,16 @@ def fromClients(entry):
         # Client already has a handle, tries to register another
         if clients[address] != None:
             print(f"{address} ({clients[address]}) Attempted to register again")
-            jsonData = {'command': 'error', 'message': "Error: Registration failed. You already have a username."}
+            jsonData = {'command': 'error', 'message': "Error: Registration failed. You already have a username.\n> "}
         # Client has no handle, tries to register an already taken handle
         elif handle in clients.values():
             print(f"{address} handle registration failed")
-            jsonData = {'command': 'error', 'message': "Error: Registration failed. Handle or alias already exists."}
+            jsonData = {'command': 'error', 'message': "Error: Registration failed. Handle or alias already exists.\n> "}
         # Client has no handle and registers a new handle
         else:
             clients[address] = handle
             print(f"Username {handle} registered by {address}")
-            jsonData = {'command': 'server', 'given' : 'register' , 'message': f"Welcome {handle}!"}
+            jsonData = {'command': 'server', 'given' : 'register' , 'message': f"Welcome {handle}!\n> "}
             # send back to client
         
         # Bonus 3 - Broadcast to All Clients that a User has Registered a Handle    
@@ -87,10 +87,10 @@ def fromClients(entry):
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             file_list.append((filename, timestamp, user))
             response_message = f"{user}<{timestamp}>: Uploaded {filename}"
-            response = json.dumps({'command': 'server', 'message': response_message})
+            response = json.dumps({'command': 'server', 'message': response_message + "\n> "})
         except Exception as e:
             # Handle exceptions during file write
-            response = json.dumps({'command': 'error', 'message': str(e)})
+            response = json.dumps({'command': 'error', 'message': str(e)} + "\n> ")
         
         # Bonus 4 - Broadcast to All Clients that a User has Stored a File 
         for client_address in clients:
@@ -105,7 +105,7 @@ def fromClients(entry):
             # print("Command DIR")
             if len(file_list) == 0:
                 print("Error: No files in server.")
-                jsonData = {'command': 'error', 'message': "Error: No files in server."}
+                jsonData = {'command': 'error', 'message': "Error: No files in server.\n> "}
             # Server has files
             else:
                 # print("Server has files")
@@ -116,7 +116,7 @@ def fromClients(entry):
             server_socket.sendto(json.dumps(jsonData).encode(), address)
             # print("Sent successfully")
         except Exception as e:
-            print("Error sending response to client:", e)
+            print("Error sending response to client: " + e + "\n> ")
     
     # Retrieve File from Server
     elif command == "get":
@@ -129,11 +129,11 @@ def fromClients(entry):
                 # print("Response found")
             print("File sent to client successfully.")
         except FileNotFoundError:
-            response = {"command": "error", "message": f"File {filename} not found."}
+            response = {"command": "error", "message": f"File {filename} not found.\n> "}
             print("File Not Found.")
         except Exception as e:
             response = {"command": "error", "message": str(e)}
-            print(f"Error: {str(e)}")
+            print(f"Error: {str(e)}\n> ")
         server_socket.sendto(json.dumps(response).encode(), address)
         
     # BONUS 1 - Send Message to All Registered Handles
@@ -141,7 +141,7 @@ def fromClients(entry):
         # If Sender has no Handle
         if clients[address] == None:
             print(f"Client {address} Attempted to /all without username")
-            jsonData = {'command': 'error', 'message': "Error: You must register a handle first."}
+            jsonData = {'command': 'error', 'message': "Error: You must register a handle first.\n> "}
             server_socket.sendto(json.dumps(jsonData).encode(), address)
             return
         # Default
@@ -164,13 +164,13 @@ def fromClients(entry):
         # If Sender has no Handle
         if sender == None:
             print(f"Client {address} Attempted to /dm without username")
-            jsonData = {'command': 'error', 'message': "Error: You must register a handle first."}
+            jsonData = {'command': 'error', 'message': "Error: You must register a handle first.\n> "}
             server_socket.sendto(json.dumps(jsonData).encode(), address)
             return
         # If Sender send msg to Self
         elif sender == handle:
             print(f"Client {address} Attempted to /dm self")
-            jsonData = {'command': 'error', 'message': "Error: You cannot DM yourself."}
+            jsonData = {'command': 'error', 'message': "Error: You cannot DM yourself.\n> "}
             server_socket.sendto(json.dumps(jsonData).encode(), address)
             return
         
@@ -191,7 +191,7 @@ def fromClients(entry):
                     print(f"Receipt sent back to {sender}")
                 except:
                     # invalid receiver
-                    jsonData = {'command': 'error', 'message': "Error: Handle/alias does not exist."}
+                    jsonData = {'command': 'error', 'message': "Error: Handle/alias does not exist.\n> "}
                 
                 # send response to sender
                 server_socket.sendto(json.dumps(jsonData).encode(), address)

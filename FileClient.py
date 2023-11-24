@@ -255,8 +255,7 @@ def fromServer(data):
     elif command == 'server' or command == 'error':
         # print(f"> {command}!") # FOR DEBUGGING, REMOVE LATER
         if 'message' in data:
-            print(f"Server Message: {message}")
-            # print("> ", end = "")
+            print(f"Server Message: {message}", end = "")
 
 # Receive Response from Server  
 def receive():
