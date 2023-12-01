@@ -15,11 +15,18 @@ BUFFER_SIZE = 1024
 isConnected = False
 # Server Address Variable
 server_address = None
+# Command Variable
+command = None
+# Params Variable
+params = None
+
 
 # Command Processing
 def toServer(entry):
     global isConnected
     global server_address
+    global command
+    global params
     
     # Invalid Command (does not start with "/")
     if not entry.startswith('/'):
@@ -42,19 +49,29 @@ def toServer(entry):
         # No Errors
         else:
             try:
+                socket.gethostbyname(params[0])
+
                 server_address = (params[0], int(params[1]))
-                
+
                 # Send "Join" Command to Server
                 client_socket.sendto(json.dumps({"command": "join"}).encode(), server_address)
-                print("Connection to the Server is successful!")
-                time.sleep(0.1)
+
+                # Wait for "join_ack" Command from Server
                 client_socket.settimeout(3)
-                client_socket.settimeout(None)
-                isConnected = True
-                
+                response = client_socket.recvfrom(BUFFER_SIZE)
+                data = json.loads(response[0].decode())
+                if data["command"] == "join_ack":
+                    isConnected = True
+                    print("Successfully connected to the server.")
+                    client_socket.settimeout(None)
+                else:
+                    raise Exception("Did not receive 'join_ack' from server.")
+            except socket.timeout:
+                print("Error: Server is offline or not responding.")
+                server_address = None
+                return
             except Exception as e:
-                print("Error: Connection to the Server has failed! Please check IP Address and Port Number.")
-                print(f"More details: {str(e)}")
+                print(f"Error: {str(e)}")
                 server_address = None
                 return
     # Leave Command
@@ -177,6 +194,8 @@ def toServer(entry):
             
     elif command == "/cls":
         os.system('cls')
+        print("File Exchange Client")
+        print("Enter a command. Type /? for help")
 
 
     # Help Command
@@ -220,6 +239,10 @@ def fromServer(data):
                 user = file[2]
                 print(f"{filename} <{timestamp}> : {user}")
         return
+    
+    elif command == "join_ack":
+        message = data['message']
+        print(f"{message}")
 
     elif command == "get":
         filename = data['filename']
@@ -252,27 +275,34 @@ def fromServer(data):
         print("> ", end = "")
 
     # Print Response command from Server
-    elif command == 'server' or command == 'error':
+    elif command == 'server':
         # print(f"> {command}!") # FOR DEBUGGING, REMOVE LATER
         if 'message' in data:
             print(f"Server Message: {message}", end = "")
+            
+    elif command == 'error':
+        if 'message' in data:
+            print(f"{message}")
 
 # Receive Response from Server  
 def receive():
     global isConnected
     
     while True:
-        if isConnected:
-            try:
-                response = client_socket.recvfrom(BUFFER_SIZE)
-                data = json.loads(response[0].decode())
-                fromServer(data)
-            except ConnectionResetError:
-                print("Error: Connection to the Server has been lost!")
-                isConnected = False
-            except Exception as e:
-                print(f"Error: {str(e)}")
-                # print("> ", end = "")
+        
+        # Lines only for when connected
+        if command != "/join":
+            if isConnected:
+                try:   
+                    response = client_socket.recvfrom(BUFFER_SIZE)
+                    data = json.loads(response[0].decode())
+                    fromServer(data)
+                except ConnectionResetError:
+                    print("Error: Connection to the Server has been lost!")
+                    isConnected = False
+                except Exception as e:
+                    print(f"Error: {str(e)}")
+                    # print("> ", end = "")
                 
    
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
