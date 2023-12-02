@@ -226,6 +226,15 @@ def fromServer(data):
         client_socket.sendto(json.dumps(ping_ack).encode(), server_address)
         return
     
+    elif command == "store":
+        uploader = data['uploader']
+        timestamp = data['timestamp']
+        filename_str = data['filename_str']
+        
+        print("received")
+        
+        # print(f"{uploader} <{timestamp}>: Uploaded {filename_str}")
+    
     
     elif command == "dir":
         # Receive Response from Server
@@ -233,11 +242,14 @@ def fromServer(data):
         # print("preparing to print")
         if data['command'] == 'dir':
             print("File Server Directory:")
-            for file in data['file_list']:
-                filename = file[0]
-                timestamp = file[1]
-                user = file[2]
-                print(f"{filename} <{timestamp}> : {user}")
+            file_list = data['file_list']
+            timestamp_list = data['timestamp_list']
+            uploader_list = data['uploader_list']
+            for i in range(len(file_list)):
+                curr_filename = file_list[i]
+                curr_timestamp = timestamp_list[i]
+                curr_uploader = uploader_list[i]
+                print(f"{curr_filename} <{curr_timestamp}> : {curr_uploader}")
         return
     
     elif command == "join_ack":
@@ -283,6 +295,7 @@ def fromServer(data):
     elif command == 'error':
         if 'message' in data:
             print(f"{message}")
+            print("tracker error")
 
 # Receive Response from Server  
 def receive():

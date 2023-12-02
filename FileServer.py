@@ -71,11 +71,11 @@ def fromClients(entry):
                 server_socket.sendto(json.dumps(jsonData).encode(), client_address)
     # Store File in Server        
     elif command == "store":
-        # TODO: Add file to a list for the server to keep track of
-        # Error Validation comes in the form of same filename and type, either ask user to overwrite, or rename file
+        
         filename = message.get('filename')
+        filename_str = str(filename)
         file_data = message.get('data')
-        user = clients.get(address)  # Assuming `clients` is a dict mapping addresses to usernames
+        uploader = clients.get(address)  # Assuming `clients` is a dict mapping addresses to usernames
 
         try:
             # Save the file data received from the client
@@ -84,12 +84,16 @@ def fromClients(entry):
 
             # Generate a timestamp
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            file_list.append((filename, timestamp, user))
-            response_message = f"{user}<{timestamp}>: Uploaded {filename}\n> "
-            response = json.dumps({'command': 'server', 'message': response_message})
+            file_list.append(filename)
+            timestamp_list.append(timestamp)
+            uploader_list.append(uploader)
+            response_message = f"{uploader} <{timestamp}>: Uploaded {filename_str}"
+            print(response_message)
+            response = json.dumps({'command': 'server', 'uploader' : uploader, 'timestamp' : timestamp, 'filename_str': filename_str})
         except Exception as e:
             # Handle exceptions during file write
             response = json.dumps({'command': 'error', 'message': f"{str(e)}"})
+            print("store server exception tracker")
         
         # Bonus 4 - Broadcast to All Clients that a User has Stored a File 
         for client_address in clients:
@@ -108,7 +112,7 @@ def fromClients(entry):
             # Server has files
             else:
                 # print("Server has files")
-                jsonData = {'command': 'dir', 'file_list': file_list}
+                jsonData = {'command': 'dir', 'file_list': file_list, 'timestamp_list': timestamp_list, 'uploader_list': uploader_list}
             # Response to Client
             # print("Sending response")
             # print("Data being sent:", jsonData)
@@ -122,7 +126,7 @@ def fromClients(entry):
         filename = message['filename']
         # print("Get")
         try:
-            if not filename in file_list[0]:
+            if not filename in file_list:
                 raise FileNotFoundError
             
             with open(filename, 'rb') as file:
@@ -223,6 +227,8 @@ clients = {}
 disconnected = []
 # Server File Directory List
 file_list = []
+timestamp_list = []
+uploader_list = []
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)           
        
@@ -252,6 +258,7 @@ while True:
         
     except Exception as e:
         print(f"Error: {str(e)}")
+        print("default server exception tracker")
     
     finally:
         for user in disconnected:
