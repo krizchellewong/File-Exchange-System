@@ -135,11 +135,8 @@ def toServer(entry):
         
     # DIR Command
     elif command == "/dir":
-        # TODO: Request File List from server
         # Request File List from Server
-        # print("Requested")
         if isConnected:
-            # print("Sending request")
             try:
                 client_socket.sendto(json.dumps({"command": "dir"}).encode(), server_address)
                 time.sleep(0.1)
@@ -151,12 +148,10 @@ def toServer(entry):
     # Get Command
     elif command == "/get":
         if isConnected:
-            # print("Connected")
             if len(params) < 1:
                 print("Error: Invalid command syntax!")
                 print("Usage: /get <filename>")
             else:
-                # print("File is here")
                 filename = params[0]
                 try:
                     client_socket.sendto(json.dumps({"command": "get", "filename": filename}).encode(), server_address)
@@ -187,7 +182,6 @@ def toServer(entry):
             else:
                 handle = params[0]
                 message = ' '.join(params[1:])
-                # print(f"Sending message to {handle}: {message}")
                 client_socket.sendto(json.dumps({"command" : "dm", "handle" : handle, "message" : message}).encode(), server_address)
         else:
             print('Error. Please connect to the server first.')
@@ -216,86 +210,82 @@ def toServer(entry):
 
 # Server Message Response
 def fromServer(data):
-    command = data['command']
 
-    if 'message' in data:
-        message = data['message']
-    
-    if command == "ping":
-        ping_ack = {'command': 'ping'}
-        client_socket.sendto(json.dumps(ping_ack).encode(), server_address)
-        return
-    
-    elif command == "store":
-        uploader = data['uploader']
-        timestamp = data['timestamp']
-        filename_str = data['filename_str']
-        
-        print("received")
-        
-        # print(f"{uploader} <{timestamp}>: Uploaded {filename_str}")
-    
-    
-    elif command == "dir":
-        # Receive Response from Server
-        # print("response received")
-        # print("preparing to print")
-        if data['command'] == 'dir':
-            print("File Server Directory:")
-            file_list = data['file_list']
-            timestamp_list = data['timestamp_list']
-            uploader_list = data['uploader_list']
-            for i in range(len(file_list)):
-                curr_filename = file_list[i]
-                curr_timestamp = timestamp_list[i]
-                curr_uploader = uploader_list[i]
-                print(f"{curr_filename} <{curr_timestamp}> : {curr_uploader}")
-        return
-    
-    elif command == "join_ack":
-        message = data['message']
-        print(f"{message}")
+    # make sure the data is json
+    if not(isinstance(data, str)):
+        command = data['command']
 
-    elif command == "get":
-        filename = data['filename']
-        file_data = data['data'].encode('ISO-8859-1')
-        # print("Get client")
-        try:
-            with open(filename, 'wb') as file:
-                file.write(file_data)
-            file.close()
-            print(f"File received from server:  {filename}")
-        except Exception as e:
-            print(f"Error: {str(e)}")
-            
-    # Receive Global Message
-    elif command == "all":
-        sender = data['sender']
-        message = f"[From {sender} to all]: {message}"
-        print(f"{message}\n> ", end = "")
-    
-    # Receive Message from Sender
-    elif command == "dm":
-        sender = data['sender']
-        message = f"[From {sender} to you]: {message}"
-        print(f"{message}\n> ", end = "")
-        
-    # Receive Message Receipt
-    elif command == 'receipt':
-        handle = data['handle']
-        message = f"[From you to {handle}]: {message}"
-        print("> ", end = "")
-
-    # Print Response command from Server
-    elif command == 'server':
-        # print(f"> {command}!") # FOR DEBUGGING, REMOVE LATER
         if 'message' in data:
-            print(f"Server Message: {message}", end = "")
+            message = data['message']
+        
+        if command == "ping":
+            ping_ack = {'command': 'ping'}
+            client_socket.sendto(json.dumps(ping_ack).encode(), server_address)
+            return
+        
+        elif command == "store":
+            uploader = data['uploader']
+            timestamp = data['timestamp']
+            filename_str = data['filename_str']
             
-    elif command == 'error':
-        if 'message' in data:
+            print("received")
+        
+        elif command == "dir":
+            # Receive Response from Server
+            if data['command'] == 'dir':
+                print("File Server Directory:")
+                file_list = data['file_list']
+                timestamp_list = data['timestamp_list']
+                uploader_list = data['uploader_list']
+                for i in range(len(file_list)):
+                    curr_filename = file_list[i]
+                    curr_timestamp = timestamp_list[i]
+                    curr_uploader = uploader_list[i]
+                    print(f"{curr_filename} <{curr_timestamp}> : {curr_uploader}")
+            return
+        
+        elif command == "join_ack":
+            message = data['message']
             print(f"{message}")
-            print("tracker error")
+
+        elif command == "get":
+            filename = data['filename']
+            file_data = data['data'].encode('ISO-8859-1')
+            try:
+                with open(filename, 'wb') as file:
+                    file.write(file_data)
+                file.close()
+                print(f"File received from server:  {filename}")
+            except Exception as e:
+                print(f"Error: {str(e)}")
+                
+        # Receive Global Message
+        elif command == "all":
+            sender = data['sender']
+            message = f"[From {sender} to all]: {message}"
+            print(f"{message}\n> ", end = "")
+        
+        # Receive Message from Sender
+        elif command == "dm":
+            sender = data['sender']
+            message = f"[From {sender} to you]: {message}"
+            print(f"{message}\n> ", end = "")
+            
+        # Receive Message Receipt
+        elif command == 'receipt':
+            handle = data['handle']
+            message = f"[From you to {handle}]: {message}"
+            print("> ", end = "")
+
+        # Print Response command from Server
+        elif command == 'server':
+            if 'message' in data:
+                print(f"Server Message: {message}", end = "")
+                
+        elif command == 'error':
+            if 'message' in data:
+                print(f"{message}")
+                print("tracker error")
 
 # Receive Response from Server  
 def receive():
@@ -308,14 +298,20 @@ def receive():
             if isConnected:
                 try:   
                     response = client_socket.recvfrom(BUFFER_SIZE)
-                    data = json.loads(response[0].decode())
+
+                    # check if data is string or json then read it accordingly
+                    response_str = response[0].decode()
+                    try:
+                        data = json.loads(response_str)
+                    except json.JSONDecodeError:
+                        data = response_str
+
                     fromServer(data)
                 except ConnectionResetError:
                     print("Error: Connection to the Server has been lost!")
                     isConnected = False
                 except Exception as e:
-                    print(f"Error: {str(e)}")
-                    # print("> ", end = "")
+                    print(f"Error314: {str(e)}")
                 
    
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

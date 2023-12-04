@@ -105,26 +105,20 @@ def fromClients(entry):
     elif command == "dir":
         try:
             # If Server does not contain any files
-            # print("Command DIR")
             if len(file_list) == 0:
                 print("Error: No files in server.")
                 jsonData = {'command': 'error', 'message': "Error: No files in server."}
             # Server has files
             else:
-                # print("Server has files")
                 jsonData = {'command': 'dir', 'file_list': file_list, 'timestamp_list': timestamp_list, 'uploader_list': uploader_list}
             # Response to Client
-            # print("Sending response")
-            # print("Data being sent:", jsonData)
             server_socket.sendto(json.dumps(jsonData).encode(), address)
-            # print("Sent successfully")
         except Exception as e:
             print("Error sending response to client: " + e)
     
     # Retrieve File from Server
     elif command == "get":
         filename = message['filename']
-        # print("Get")
         try:
             if not filename in file_list:
                 raise FileNotFoundError
@@ -132,7 +126,6 @@ def fromClients(entry):
             with open(filename, 'rb') as file:
                 file_data = file.read()
                 response = {"command": "get", "filename": filename, "data": file_data.decode('ISO-8859-1'), "message": "File sent successfully."}
-                # print("Response found")
             print("File sent to client successfully.")
         except FileNotFoundError:
             response = {"command": "error", "message": f"Error: File {filename} not found."}
@@ -184,9 +177,7 @@ def fromClients(entry):
             if client_handle == handle:
                 # contain message from sender
                 message_jsonData = {'command': 'dm', 'sender' : sender, 'message': message}
-                # print("sent to receiver")
                 try:
-                    # print("sending receipt")
                     # send message to receiver
                     server_socket.sendto(json.dumps(message_jsonData).encode(), client_address)
                     print(f"Direct Message Sent from {sender} to {handle}")
