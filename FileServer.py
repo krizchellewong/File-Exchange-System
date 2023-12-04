@@ -77,13 +77,25 @@ def fromClients(entry):
 
             # Generate a timestamp
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            file_list.append(filename)
-            timestamp_list.append(timestamp)
-            uploader_list.append(uploader)
-            response_message = f"{uploader} <{timestamp}>: Uploaded {filename_str}"
-            print(response_message)
-            response = {'command': 'store', 'uploader' : uploader, 'timestamp' : timestamp, 'filename_str': filename_str}
-            server_socket.sendto(json.dumps(response).encode(), address)
+            
+            # Check if Filename already exists in Server
+            if filename_str not in file_str_list:
+                print("New File Detected. Appending to Lists.")
+                file_list.append(filename)
+                file_str_list.append(filename_str)
+                timestamp_list.append(timestamp)
+                uploader_list.append(uploader)
+                response_message = f"{uploader} <{timestamp}>: Uploaded {filename_str}"
+                print(response_message)
+                response = {'command': 'store', 'uploader' : uploader, 'timestamp' : timestamp, 'filename_str': filename_str}
+                server_socket.sendto(json.dumps(response).encode(), address)
+            # Reject new file, filename already exists
+            else:
+                print("Existing File Detected")
+                response_message = f"Error: File {filename_str} already exists."
+                print(response_message)
+                response = {'command': 'error', 'message': response_message}
+                server_socket.sendto(json.dumps(response).encode(), address)
         except Exception as e:
             # Handle exceptions during file write
             response = json.dumps({'command': 'error', 'message': f"{str(e)}"})
@@ -150,14 +162,8 @@ def fromClients(entry):
         
         print(f"{sender} to {handle} : {message}")
         
-        # If Sender has no Handle
-        if sender == None:
-            print(f"Client {address} Attempted to /dm without username")
-            jsonData = {'command': 'error', 'message': "Error: You must register a handle first."}
-            server_socket.sendto(json.dumps(jsonData).encode(), address)
-            return
         # If Sender send msg to Self
-        elif sender == handle:
+        if sender == handle:
             print(f"Client {address} Attempted to /dm self")
             jsonData = {'command': 'error', 'message': "Error: You cannot DM yourself."}
             server_socket.sendto(json.dumps(jsonData).encode(), address)
@@ -178,13 +184,6 @@ def fromClients(entry):
                 # send message to receiver
                 server_socket.sendto(json.dumps(message_jsonData).encode(), client_address)
                 print(f"Direct Message Sent from {sender} to {handle}")
-                
-                # notify sender of message receipt
-                receipt = f"{message}"
-                jsonData = {'command': 'receipt', 'given' : 'dm', 'handle' : handle, 'message': receipt}
-                print(f"Receipt sent back to {sender}")
-                # send response to sender
-                server_socket.sendto(json.dumps(jsonData).encode(), address)
                     
                 return
 
@@ -212,6 +211,7 @@ clients = {}
 disconnected = []
 # Server File Directory List
 file_list = []
+file_str_list = []
 timestamp_list = []
 uploader_list = []
 
