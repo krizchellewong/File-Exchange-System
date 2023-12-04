@@ -22,7 +22,7 @@ def fromClients(entry):
     if command == "join":
         if address in clients:
             print(f"Client {address} has reconnected")
-            jsonData = {'command': 'join_ack', 'message': f"Re-connection to the Server is successful!"}
+            jsonData = {'command': 'join_ack', 'message': "Re-connection to the Server is successful!"}
         else:
             clients.update({address : None})
             print(f"Client {address} has connected")
@@ -34,16 +34,11 @@ def fromClients(entry):
     elif command == "leave":
         print(f"Client {clients[address]}:{address} disconnected")
         if clients[address] == None:
-            message = "Unregistered user disconnected\n> "
+            message = "Unregistered user disconnected"
         else:
-            message = f"User {clients[address]} disconnected\n> "
-        jsonData = {'command': 'server', 'message': message}
-        
-        # Broadcast to All Clients that a User has Disconnected
-        for client_address in clients:
-            # Send to all except the sender
-            if client_address != address:
-                server_socket.sendto(json.dumps(jsonData).encode(), client_address)
+            message = f"User {clients[address]} disconnected"
+        jsonData = {'command': 'leave', 'message': message}
+        server_socket.sendto(json.dumps(jsonData).encode(), address)
 
         # clients.pop(address)
     # Register Handle
@@ -61,14 +56,12 @@ def fromClients(entry):
         else:
             clients[address] = handle
             print(f"Username {handle} registered by {address}")
-            jsonData = {'command': 'server', 'given' : 'register' , 'message': f"Welcome {handle}!\n> "}
+            jsonData = {'command': 'register', 'given' : 'register' , 'handle' : handle, 'message': f"Welcome {handle}!"}
             # send back to client
         
-        # Bonus 3 - Broadcast to All Clients that a User has Registered a Handle    
-        for client_address in clients:
-            # Send to all except the sender
-            if client_address != address:
-                server_socket.sendto(json.dumps(jsonData).encode(), client_address)
+        server_socket.sendto(json.dumps(jsonData).encode(), address)
+    
+    
     # Store File in Server        
     elif command == "store":
         
@@ -89,17 +82,13 @@ def fromClients(entry):
             uploader_list.append(uploader)
             response_message = f"{uploader} <{timestamp}>: Uploaded {filename_str}"
             print(response_message)
-            response = json.dumps({'command': 'server', 'uploader' : uploader, 'timestamp' : timestamp, 'filename_str': filename_str})
+            response = {'command': 'store', 'uploader' : uploader, 'timestamp' : timestamp, 'filename_str': filename_str}
+            server_socket.sendto(json.dumps(response).encode(), address)
         except Exception as e:
             # Handle exceptions during file write
             response = json.dumps({'command': 'error', 'message': f"{str(e)}"})
-            print("store server exception tracker")
+            server_socket.sendto(json.dumps(response).encode(), address)
         
-        # Bonus 4 - Broadcast to All Clients that a User has Stored a File 
-        for client_address in clients:
-            # Send to all except the sender
-            if client_address != address:
-                server_socket.sendto(json.dumps(response).encode(), client_address)
         
     # Request File List from Server
     elif command == "dir":
@@ -150,7 +139,8 @@ def fromClients(entry):
         # Send Message to all Registered Handles
         for client_address, client_handle in clients.items():
             if client_handle != None:
-                server_socket.sendto(json.dumps(message_jsonData).encode(), client_address)
+                if client_handle != clients[address]:
+                    server_socket.sendto(json.dumps(message_jsonData).encode(), client_address)
        
     # BONUS 2 - Send Message to Specific Handle         
     elif command == "dm":

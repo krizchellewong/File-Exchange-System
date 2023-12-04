@@ -19,6 +19,8 @@ server_address = None
 command = None
 # Params Variable
 params = None
+# Current Client Handle
+current_handle = None
 
 
 # Command Processing
@@ -85,10 +87,7 @@ def toServer(entry):
             # Send "Leave" Command to Server
             else:
                 client_socket.sendto(json.dumps({"command": "leave"}).encode(), server_address)
-                print("Connection closed. Thank you!")
                 time.sleep(0.1)
-                isConnected = False
-                server_address = None
         # No Connection Established yet
         else:
             print("Error: Disconnection failed. Please connect to the server first.")
@@ -103,7 +102,6 @@ def toServer(entry):
             # Send "Register" Command to Server
             else:
                 client_socket.sendto(json.dumps({"command": "register", "handle": params[0]}).encode(), server_address)
-                print(f"Handle Registration Successful! Your Handle is now {params[0]}.")
                 time.sleep(0.1)
         # No Connection Established yet
         else:
@@ -122,14 +120,13 @@ def toServer(entry):
                         file_data = file.read()
                         # Send file data to the server with the command and filename
                         client_socket.sendto(json.dumps({"command": "store", "filename": filename, "data": file_data.decode('ISO-8859-1')}).encode(), server_address)
-                        print(f"File {filename} sent to server.")
                         time.sleep(0.1)
                 except FileNotFoundError:
                     # Handle the case where the file does not exist
-                    print(f"Error: File not found.\n> ", end = "")
+                    print(f"Error: File not found.")
                 except Exception as e:
                     # General exception handling
-                    print(f"Error: {str(e)}\n> ", end = "")
+                    print(f"Error: {str(e)}")
         else:
             print("Error: Please connect to the server first.")
         
@@ -210,6 +207,10 @@ def toServer(entry):
 
 # Server Message Response
 def fromServer(data):
+    global isConnected
+    global server_address
+    global command
+    global current_handle
 
     # make sure the data is json
     if not(isinstance(data, str)):
@@ -223,13 +224,28 @@ def fromServer(data):
             client_socket.sendto(json.dumps(ping_ack).encode(), server_address)
             return
         
-        elif command == "store":
-            uploader = data['uploader']
-            timestamp = data['timestamp']
-            filename_str = data['filename_str']
+        # Server Join Response
+        elif command == "join":
+            message = data['message']
+            print(f"{message}")
             
-            print("received")
+        # Server Leave Response
+        elif command == "leave":
+            print("Connection closed. Thank you!")
+            isConnected = False
+            server_address = None
         
+        # Server Register Response
+        elif command == "register":
+            current_handle = data['handle']
+            print(f"Handle Registration Successful! Your Handle is now {current_handle}.")
+        
+        # Server Store Response
+        elif command == "store":
+            filename_str = data['filename_str']
+            print(f"File {filename_str} sent to server.")
+        
+        # Server Directory Response
         elif command == "dir":
             # Receive Response from Server
             if data['command'] == 'dir':
@@ -243,11 +259,8 @@ def fromServer(data):
                     curr_uploader = uploader_list[i]
                     print(f"{curr_filename} <{curr_timestamp}> : {curr_uploader}")
             return
-        
-        elif command == "join_ack":
-            message = data['message']
-            print(f"{message}")
 
+        # Server Get Response
         elif command == "get":
             filename = data['filename']
             file_data = data['data'].encode('ISO-8859-1')
@@ -259,33 +272,33 @@ def fromServer(data):
             except Exception as e:
                 print(f"Error: {str(e)}")
                 
-        # Receive Global Message
+        # Server All Response
         elif command == "all":
             sender = data['sender']
             message = f"[From {sender} to all]: {message}"
             print(f"{message}\n> ", end = "")
         
-        # Receive Message from Sender
+        # Server DM Response
         elif command == "dm":
             sender = data['sender']
             message = f"[From {sender} to you]: {message}"
             print(f"{message}\n> ", end = "")
             
-        # Receive Message Receipt
+        # Server Message Receipt Response
         elif command == 'receipt':
             handle = data['handle']
             message = f"[From you to {handle}]: {message}"
             print("> ", end = "")
 
-        # Print Response command from Server
+        # Server Global Response
         elif command == 'server':
             if 'message' in data:
                 print(f"Server Message: {message}", end = "")
                 
+        # Server Error Response
         elif command == 'error':
             if 'message' in data:
                 print(f"{message}")
-                print("tracker error")
 
 # Receive Response from Server  
 def receive():
