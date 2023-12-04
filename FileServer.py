@@ -82,6 +82,7 @@ def fromClients(entry):
             if filename_str not in file_str_list:
                 print("New File Detected. Appending to Lists.")
                 file_list.append(filename)
+                file_data_list.append(file_data)
                 file_str_list.append(filename_str)
                 timestamp_list.append(timestamp)
                 uploader_list.append(uploader)
@@ -119,22 +120,32 @@ def fromClients(entry):
     
     # Retrieve File from Server
     elif command == "get":
-        filename = message['filename']
+        filename_str = message['filename_str']
+        
         try:
-            if not filename in file_list:
+            if not filename_str in file_str_list:
                 raise FileNotFoundError
             
-            with open(filename, 'rb') as file:
-                file_data = file.read()
-                response = {"command": "get", "filename": filename, "data": file_data.decode('ISO-8859-1'), "message": "File sent successfully."}
-            print("File sent to client successfully.")
+            else:
+                for strings in file_str_list:
+                    if filename_str == strings:
+                        filename = file_list[file_str_list.index(strings)]
+                        file_data = file_data_list[file_str_list.index(strings)]
+                        #                                                                         .decode('ISO-8859-1')
+                        response = {"command": "get", "filename": filename, "file_data": file_data, "message": "File sent successfully."}
+                        break
+                    
+                server_socket.sendto(json.dumps(response).encode(), address)
+                print("File sent to client successfully.")
+                
         except FileNotFoundError:
-            response = {"command": "error", "message": f"Error: File {filename} not found."}
+            response = {"command": "error", "message": f"Error: File {filename_str} not found."}
             print("File Not Found.")
+            server_socket.sendto(json.dumps(response).encode(), address)
         except Exception as e:
             response = {"command": "error", "message": f"Error: {str(e)}"}
             print(f"Error: {str(e)}")
-        server_socket.sendto(json.dumps(response).encode(), address)
+            server_socket.sendto(json.dumps(response).encode(), address)
         
     # BONUS 1 - Send Message to All Registered Handles
     elif command == "all":
@@ -211,6 +222,7 @@ clients = {}
 disconnected = []
 # Server File Directory List
 file_list = []
+file_data_list = []
 file_str_list = []
 timestamp_list = []
 uploader_list = []

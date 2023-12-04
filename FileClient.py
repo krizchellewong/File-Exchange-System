@@ -163,9 +163,9 @@ def toServer(entry):
             elif current_handle == None:
                 print("Error: Please register a handle first.")
             else:
-                filename = params[0]
+                filename_str = params[0]
                 try:
-                    client_socket.sendto(json.dumps({"command": "get", "filename": filename}).encode(), server_address)
+                    client_socket.sendto(json.dumps({"command": "get", "filename_str": filename_str}).encode(), server_address)
                     time.sleep(0.1)
                 except Exception as e:
                     print("Error sending data:", e)
@@ -292,7 +292,7 @@ def fromServer(data):
         # Server Get Response
         elif command == "get":
             filename = data['filename']
-            file_data = data['data'].encode('ISO-8859-1')
+            file_data = data['file_data'].encode('ISO-8859-1')
             try:
                 with open(filename, 'wb') as file:
                     file.write(file_data)
