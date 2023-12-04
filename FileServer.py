@@ -21,9 +21,11 @@ def fromClients(entry):
     
     # Join Server
     if command == "join":
+        # If Client has already connected to Server before
         if address in clients:
             print(f"Client {address} has reconnected")
             jsonData = {'command': 'join_ack', 'message': "Re-connection to the Server is successful!"}
+        # If Client has not connected to Server before
         else:
             clients.update({address : None})
             print(f"Client {address} has connected")
@@ -34,8 +36,10 @@ def fromClients(entry):
     # Leave Server     
     elif command == "leave":
         print(f"Client {clients[address]}:{address} disconnected")
+        # Client has never registered handle
         if clients[address] == None:
             message = "Unregistered user disconnected"
+        # Client has registered a handle
         else:
             message = f"User {clients[address]} disconnected"
         jsonData = {'command': 'leave', 'message': message}
@@ -122,15 +126,18 @@ def fromClients(entry):
         filename = message['filename']
         
         try:
+            # If Filename does not exist in Server
             if not filename in file_list:
                 raise FileNotFoundError
             
+            # If Filename exists in Server
             else:
                 file_index = file_list.index(filename)
                 file_data = file_data_list[file_index]
                 encoded_file_data = base64.b64encode(file_data).decode()
                 response = {"command": "get", "filename": filename, "file_data": encoded_file_data, "message": "File sent successfully."}
                     
+            # Send Response to Client
             server_socket.sendto(json.dumps(response).encode(), address)
             print("File sent to client successfully.")
                 
@@ -157,7 +164,9 @@ def fromClients(entry):
         message_jsonData = {'command': 'all', 'sender' : f'{clients[address]}', 'message': message}
         # Send Message to all Registered Handles
         for client_address, client_handle in clients.items():
+            # Receivers must have a registered handle
             if client_handle != None:
+                # All registered users except Sender
                 if client_handle != clients[address]:
                     server_socket.sendto(json.dumps(message_jsonData).encode(), client_address)
        
@@ -167,6 +176,7 @@ def fromClients(entry):
         message = message['message']
         sender = clients[address]
         
+        # Print Validation
         print(f"{sender} to {handle} : {message}")
         
         # If Sender send msg to Self
@@ -183,15 +193,17 @@ def fromClients(entry):
             server_socket.sendto(json.dumps(jsonData).encode(), address)
             return
         
+        # Default case, loop through all clients' addresses and handles
         for client_address, client_handle in clients.items():
+            
+            # if Receiver Handle is the same as Current Loop's Handle
             if client_handle == handle:
-                # contain message from sender
+                # Contain message from sender
                 message_jsonData = {'command': 'dm', 'sender' : sender, 'message': message}
                     
-                # send message to receiver
+                # Send message to receiver
                 server_socket.sendto(json.dumps(message_jsonData).encode(), client_address)
                 print(f"Direct Message Sent from {sender} to {handle}")
-                    
                 return
 
 def ping():
@@ -218,9 +230,11 @@ clients = {}
 disconnected = []
 # Server File Directory List
 file_list = []
+# Server File Data List
 file_data_list = []
-file_str_list = []
+# Server File Timestamp List
 timestamp_list = []
+# Server File Uploader List
 uploader_list = []
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)           
@@ -239,7 +253,7 @@ while True:
         print(f"Error: {str(e)}")
         print("Try again\n")
         
-# Process incoming data
+# Server Data Processor from Clients
 while True:
     try:
         entry, address = server_socket.recvfrom(BUFFER_SIZE)

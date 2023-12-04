@@ -20,7 +20,7 @@ server_address = None
 command = None
 # Params Variable
 params = None
-# Current Client Handle
+# Current Client Handle Variabl
 current_handle = None
 
 
@@ -49,7 +49,7 @@ def toServer(entry):
         # User is already connected to the server
         elif isConnected:
             print("Error: User is already connected to the server.")
-        # No Errors
+        # Default Case
         else:
             try:
                 socket.gethostbyname(params[0])
@@ -63,12 +63,14 @@ def toServer(entry):
                 client_socket.settimeout(3)
                 response = client_socket.recvfrom(BUFFER_SIZE)
                 data = json.loads(response[0].decode())
+                # Join Acknowledge Received from Server
                 if data["command"] == "join_ack":
                     isConnected = True
                     print("Successfully connected to the server.")
                     client_socket.settimeout(None)
                 else:
                     raise Exception("Did not receive 'join_ack' from server.")
+            # Server entered does not exist or is offline
             except socket.timeout:
                 print("Error: Server is offline or not responding.")
                 server_address = None
@@ -109,14 +111,19 @@ def toServer(entry):
             print("Error: Please connect to the server first.")
     # Store Command
     elif command == "/store":
+        # Check if Client is Connected to the Server
         if isConnected:
+            # Invalid Syntax/Parameters
             if len(params) < 1:
                 print("Error: Invalid command syntax!")
                 print("Usage: /store <filename>")
                 
+            # No Handle Registered
             elif current_handle == None:
                 print("Error: Please register a handle first.")
+            # Default Case
             else:
+                # Set filename to first parameter
                 filename = params[0]
                 try:
                     # Open the specified file in binary mode for reading
@@ -126,6 +133,7 @@ def toServer(entry):
                         # Send file data to the server with the command and filename
                         client_socket.sendto(json.dumps({"command": "store", "filename": filename, "data": encoded_file_data}).encode(), server_address)
                         time.sleep(0.1)
+                # File does not exist in local directory
                 except FileNotFoundError:
                     # Handle the case where the file does not exist
                     print(f"Error: File not found.")
@@ -137,33 +145,39 @@ def toServer(entry):
         
     # DIR Command
     elif command == "/dir":
-        # Request File List from Server
+        # Check if Client is Connected to the Server
         if isConnected:
+            # Invalid Syntax/Parameters
             if len(params) > 0:
                 print("Error: There should be no parameters for dir.")
                 print("Usage: /dir")
-            
+            # No Handle Registered
             elif current_handle == None:
                 print("Error: Please register a handle first.")
-                
+            # Default Case
             else:
                 try:
                     client_socket.sendto(json.dumps({"command": "dir"}).encode(), server_address)
                     time.sleep(0.1)
                 except Exception as e:
-                    print("Error sending data:", e)            
+                    print("Error sending data:", e)       
+        # No Connection Established yet     
         else:
             print("Error: Please connect to the server first.")
 
     # Get Command
     elif command == "/get":
+        # Check if Client is Connected to the Server
         if isConnected:
+            # Invalid Syntax/Parameters
             if len(params) < 1:
                 print("Error: Invalid command syntax!")
                 print("Usage: /get <filename>")
                 
+            # No Handle Registered
             elif current_handle == None:
                 print("Error: Please register a handle first.")
+            # Default Case
             else:
                 filename = params[0]
                 client_socket.sendto(json.dumps({"command": "get", "filename": filename}).encode(), server_address)
@@ -174,34 +188,45 @@ def toServer(entry):
             
     # Message All Command
     elif command == "/all":
+        # Check if Client is Connected to the Server
         if isConnected:
+            # Invalid Syntax/Parameters
             if len(params) == 0:
                 print("Error: Command parameters do not match or is not allowed.")
                 print("Usage: /all <message>")
+            # No Handle Registered
             elif current_handle == None:
                 print("Error: Please register a handle first.")
+            # Default Case
             else:
                 message = ' '.join(params)
                 client_socket.sendto(json.dumps({"command" : "all", "message" : message}).encode(), server_address)
+        # No Connection Established yet
         else:
             print('Error. Please connect to the server first.')
     
     # Direct Message Command
     elif command == "/dm":
+        # Check if Client is Connected to the Server
         if isConnected:
+            # Invalid Syntax/Parameters
             if len(params) < 2:
                 print("Error: Command parameters do not match or is not allowed.")
                 print("Usage: /dm <handle> <message>")
                 
+            # No Handle Registered
             elif current_handle == None:
                 print("Error: Please register a handle first.")
+            # Default Case
             else:
                 handle = params[0]
                 message = ' '.join(params[1:])
                 client_socket.sendto(json.dumps({"command" : "dm", "handle" : handle, "message" : message}).encode(), server_address)
+        # No Connection Established yet
         else:
             print('Error. Please connect to the server first.')
-            
+         
+    # Clear Screen Command - Visuals Only   
     elif command == "/cls":
         # Checking if the OS is Windows
         if os.name == "nt":  
@@ -234,7 +259,7 @@ def toServer(entry):
     else:
         print("Command not found. Type /? for help.")
 
-# Server Message Response
+# Server Message Response Logic Processor
 def fromServer(data):
     global isConnected
     global server_address
@@ -244,10 +269,8 @@ def fromServer(data):
     # make sure the data is json
     if not(isinstance(data, str)):
         command = data['command']
-
-        if 'message' in data:
-            message = data['message']
         
+        # Server Ping Response
         if command == "ping":
             ping_ack = {'command': 'ping'}
             client_socket.sendto(json.dumps(ping_ack).encode(), server_address)
@@ -323,7 +346,7 @@ def receive():
     
     while True:
         
-        # Lines only for when connected
+        # Lines only for when connected (join not included)
         if command != "/join":
             if isConnected:
                 try:   
@@ -343,11 +366,12 @@ def receive():
                 except Exception as e:
                     print(f"Error314: {str(e)}")
                 
-   
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 thread = threading.Thread(target = receive)
 thread.start()
+
+# START OF ACTUAL PROGRAM
 
 print("File Exchange Client")
 print("Enter a command. Type /? for help")
