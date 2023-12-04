@@ -112,6 +112,9 @@ def toServer(entry):
             if len(params) < 1:
                 print("Error: Invalid command syntax!")
                 print("Usage: /store <filename>")
+                
+            elif current_handle == None:
+                print("Error: Please register a handle first.")
             else:
                 filename = params[0]
                 try:
@@ -134,11 +137,19 @@ def toServer(entry):
     elif command == "/dir":
         # Request File List from Server
         if isConnected:
-            try:
-                client_socket.sendto(json.dumps({"command": "dir"}).encode(), server_address)
-                time.sleep(0.1)
-            except Exception as e:
-                print("Error sending data:", e)            
+            if len(params) > 0:
+                print("Error: There should be no parameters for dir.")
+                print("Usage: /dir")
+            
+            elif current_handle == None:
+                print("Error: Please register a handle first.")
+                
+            else:
+                try:
+                    client_socket.sendto(json.dumps({"command": "dir"}).encode(), server_address)
+                    time.sleep(0.1)
+                except Exception as e:
+                    print("Error sending data:", e)            
         else:
             print("Error: Please connect to the server first.")
 
@@ -148,6 +159,9 @@ def toServer(entry):
             if len(params) < 1:
                 print("Error: Invalid command syntax!")
                 print("Usage: /get <filename>")
+                
+            elif current_handle == None:
+                print("Error: Please register a handle first.")
             else:
                 filename = params[0]
                 try:
@@ -164,6 +178,8 @@ def toServer(entry):
             if len(params) == 0:
                 print("Error: Command parameters do not match or is not allowed.")
                 print("Usage: /all <message>")
+            elif current_handle == None:
+                print("Error: Please register a handle first.")
             else:
                 message = ' '.join(params)
                 client_socket.sendto(json.dumps({"command" : "all", "message" : message}).encode(), server_address)
@@ -176,6 +192,9 @@ def toServer(entry):
             if len(params) < 2:
                 print("Error: Command parameters do not match or is not allowed.")
                 print("Usage: /dm <handle> <message>")
+                
+            elif current_handle == None:
+                print("Error: Please register a handle first.")
             else:
                 handle = params[0]
                 message = ' '.join(params[1:])
@@ -284,16 +303,10 @@ def fromServer(data):
             message = f"[From {sender} to you]: {message}"
             print(f"{message}\n> ", end = "")
             
-        # Server Message Receipt Response
-        elif command == 'receipt':
-            handle = data['handle']
-            message = f"[From you to {handle}]: {message}"
-            print("> ", end = "")
-                
         # Server Error Response
         elif command == 'error':
             if 'message' in data:
-                print(f"{message}\n> ", end = "")
+                print(f"{message}")
 
 # Receive Response from Server  
 def receive():
