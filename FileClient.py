@@ -289,16 +289,11 @@ def fromServer(data):
             handle = data['handle']
             message = f"[From you to {handle}]: {message}"
             print("> ", end = "")
-
-        # Server Global Response
-        elif command == 'server':
-            if 'message' in data:
-                print(f"Server Message: {message}", end = "")
                 
         # Server Error Response
         elif command == 'error':
             if 'message' in data:
-                print(f"{message}")
+                print(f"{message}\n> ", end = "")
 
 # Receive Response from Server  
 def receive():

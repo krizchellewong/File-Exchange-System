@@ -163,25 +163,29 @@ def fromClients(entry):
             server_socket.sendto(json.dumps(jsonData).encode(), address)
             return
         
+        # If Sender send msg to non-existent Handle
+        elif handle not in clients.values():
+            print(f"Client {address} Attempted to /dm non-existent handle")
+            jsonData = {'command': 'error', 'message': "Error: Handle does not exist."}
+            server_socket.sendto(json.dumps(jsonData).encode(), address)
+            return
+        
         for client_address, client_handle in clients.items():
             if client_handle == handle:
                 # contain message from sender
                 message_jsonData = {'command': 'dm', 'sender' : sender, 'message': message}
-                try:
-                    # send message to receiver
-                    server_socket.sendto(json.dumps(message_jsonData).encode(), client_address)
-                    print(f"Direct Message Sent from {sender} to {handle}")
                     
-                    # notify sender of message receipt
-                    receipt = f"{message}"
-                    jsonData = {'command': 'receipt', 'given' : 'dm', 'handle' : handle, 'message': receipt}
-                    print(f"Receipt sent back to {sender}")
-                except:
-                    # invalid receiver
-                    jsonData = {'command': 'error', 'message': "Error: Handle/alias does not exist."}
+                # send message to receiver
+                server_socket.sendto(json.dumps(message_jsonData).encode(), client_address)
+                print(f"Direct Message Sent from {sender} to {handle}")
                 
+                # notify sender of message receipt
+                receipt = f"{message}"
+                jsonData = {'command': 'receipt', 'given' : 'dm', 'handle' : handle, 'message': receipt}
+                print(f"Receipt sent back to {sender}")
                 # send response to sender
                 server_socket.sendto(json.dumps(jsonData).encode(), address)
+                    
                 return
 
 def ping():
