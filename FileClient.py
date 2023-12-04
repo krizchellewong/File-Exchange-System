@@ -203,8 +203,18 @@ def toServer(entry):
             print('Error. Please connect to the server first.')
             
     elif command == "/cls":
-        os.system('cls')
-        print("File Exchange Client")
+        # Checking if the OS is Windows
+        if os.name == "nt":  
+             # Clear the screen for Windows            
+            os.system('cls') 
+        else:
+            # Clear the screen for macOS/Linux
+            os.system('clear')  
+
+        if current_handle == None:
+            print("File Exchange Client")
+        else:
+            print(f"File Exchange Client - {current_handle}")
         print("Enter a command. Type /? for help")
 
 
