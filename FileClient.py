@@ -8,6 +8,7 @@ import threading
 import json
 import time
 import os
+import base64
 
 # Message Buffer Size
 BUFFER_SIZE = 1024
@@ -121,8 +122,9 @@ def toServer(entry):
                     # Open the specified file in binary mode for reading
                     with open(filename, 'rb') as file:
                         file_data = file.read()
+                        encoded_file_data = base64.b64encode(file_data).decode()
                         # Send file data to the server with the command and filename
-                        client_socket.sendto(json.dumps({"command": "store", "filename": filename, "data": file_data.decode('ISO-8859-1')}).encode(), server_address)
+                        client_socket.sendto(json.dumps({"command": "store", "filename": filename, "data": encoded_file_data}).encode(), server_address)
                         time.sleep(0.1)
                 except FileNotFoundError:
                     # Handle the case where the file does not exist
@@ -163,12 +165,10 @@ def toServer(entry):
             elif current_handle == None:
                 print("Error: Please register a handle first.")
             else:
-                filename_str = params[0]
-                try:
-                    client_socket.sendto(json.dumps({"command": "get", "filename_str": filename_str}).encode(), server_address)
-                    time.sleep(0.1)
-                except Exception as e:
-                    print("Error sending data:", e)
+                filename = params[0]
+                client_socket.sendto(json.dumps({"command": "get", "filename": filename}).encode(), server_address)
+                time.sleep(0.1)
+
         else:
             print("Error: Please connect to the server first.")
             
@@ -271,8 +271,8 @@ def fromServer(data):
         
         # Server Store Response
         elif command == "store":
-            filename_str = data['filename_str']
-            print(f"File {filename_str} sent to server.")
+            filename = data['filename']
+            print(f"File {filename} sent to server.")
         
         # Server Directory Response
         elif command == "dir":
@@ -292,12 +292,11 @@ def fromServer(data):
         # Server Get Response
         elif command == "get":
             filename = data['filename']
-            file_data = data['file_data'].encode('ISO-8859-1')
+            file_data = base64.b64decode(data['file_data'])
             try:
                 with open(filename, 'wb') as file:
                     file.write(file_data)
-                file.close()
-                print(f"File received from server:  {filename}")
+                print(f"File received from server: {filename}")
             except Exception as e:
                 print(f"Error: {str(e)}")
                 

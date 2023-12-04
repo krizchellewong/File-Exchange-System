@@ -8,6 +8,7 @@ import socket
 import time
 import json
 import os
+import base64
 from datetime import datetime
 
 # Message Buffer Size
@@ -66,34 +67,32 @@ def fromClients(entry):
     elif command == "store":
         
         filename = message.get('filename')
-        filename_str = str(filename)
-        file_data = message.get('data')
+        file_data = base64.b64decode(message.get('data'))
         uploader = clients.get(address)  # Assuming `clients` is a dict mapping addresses to usernames
 
         try:
             # Save the file data received from the client
             with open(filename, 'wb') as file:
-                file.write(file_data.encode('utf-8'))
+                file.write(file_data)
 
             # Generate a timestamp
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             
             # Check if Filename already exists in Server
-            if filename_str not in file_str_list:
+            if filename not in file_list:
                 print("New File Detected. Appending to Lists.")
                 file_list.append(filename)
                 file_data_list.append(file_data)
-                file_str_list.append(filename_str)
                 timestamp_list.append(timestamp)
                 uploader_list.append(uploader)
-                response_message = f"{uploader} <{timestamp}>: Uploaded {filename_str}"
+                response_message = f"{uploader} <{timestamp}>: Uploaded {filename}"
                 print(response_message)
-                response = {'command': 'store', 'uploader' : uploader, 'timestamp' : timestamp, 'filename_str': filename_str}
+                response = {'command': 'store', 'uploader' : uploader, 'timestamp' : timestamp, 'filename': filename}
                 server_socket.sendto(json.dumps(response).encode(), address)
             # Reject new file, filename already exists
             else:
                 print("Existing File Detected")
-                response_message = f"Error: File {filename_str} already exists."
+                response_message = f"Error: File {filename} already exists."
                 print(response_message)
                 response = {'command': 'error', 'message': response_message}
                 server_socket.sendto(json.dumps(response).encode(), address)
@@ -120,26 +119,23 @@ def fromClients(entry):
     
     # Retrieve File from Server
     elif command == "get":
-        filename_str = message['filename_str']
+        filename = message['filename']
         
         try:
-            if not filename_str in file_str_list:
+            if not filename in file_list:
                 raise FileNotFoundError
             
             else:
-                for strings in file_str_list:
-                    if filename_str == strings:
-                        filename = file_list[file_str_list.index(strings)]
-                        file_data = file_data_list[file_str_list.index(strings)]
-                        #                                                                         .decode('ISO-8859-1')
-                        response = {"command": "get", "filename": filename, "file_data": file_data, "message": "File sent successfully."}
-                        break
+                file_index = file_list.index(filename)
+                file_data = file_data_list[file_index]
+                encoded_file_data = base64.b64encode(file_data).decode()
+                response = {"command": "get", "filename": filename, "file_data": encoded_file_data, "message": "File sent successfully."}
                     
-                server_socket.sendto(json.dumps(response).encode(), address)
-                print("File sent to client successfully.")
+            server_socket.sendto(json.dumps(response).encode(), address)
+            print("File sent to client successfully.")
                 
         except FileNotFoundError:
-            response = {"command": "error", "message": f"Error: File {filename_str} not found."}
+            response = {"command": "error", "message": f"Error: File {filename} not found."}
             print("File Not Found.")
             server_socket.sendto(json.dumps(response).encode(), address)
         except Exception as e:
