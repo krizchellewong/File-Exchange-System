@@ -269,6 +269,9 @@ def fromServer(data):
     # make sure the data is json
     if not(isinstance(data, str)):
         command = data['command']
+
+        if 'message' in data:
+            message = data['message']
         
         # Server Ping Response
         if command == "ping":
@@ -299,7 +302,6 @@ def fromServer(data):
         
         # Server Directory Response
         elif command == "dir":
-            # Receive Response from Server
             if data['command'] == 'dir':
                 print("File Server Directory:")
                 file_list = data['file_list']
@@ -360,11 +362,12 @@ def receive():
                         data = response_str
 
                     fromServer(data)
+
                 except ConnectionResetError:
                     print("Error: Connection to the Server has been lost!")
                     isConnected = False
                 except Exception as e:
-                    print(f"Error314: {str(e)}")
+                    print(f"Error: {str(e)}")
                 
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
